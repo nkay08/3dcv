@@ -5,34 +5,35 @@ import copy
 
 import scipy.io as io
 
-def compute_relative_rotation(h,k):
+def compute_relative_rotation(H,K):
 
     # H = lambda K [r1 r2 t]
 
-    kinv = np.invert(k)
+    Kinv = np.invert(K)
 
-    kinvh = np.dot(kinv,h)
-    print(kinvh)
+    #matrix A = K-1 * H
+    A = np.dot(Kinv,H)
+    #print(A)
 
-    r1 = kinvh[:,0]
-    r2 = kinvh[:,1]
-    #r1= column(kinvh,0)
-    #r2 = column(kinvh, 1)
-    #t = h[:,2]
+    a1 = A[:,0]
+    a2 = A[:,1]
 
-    #print(r1)
-    #print(r2)
-    norm1 = np.linalg.norm(r1)
-    norm2 =np.linalg.norm(r2)
+    norm1 = np.linalg.norm(a1)
+    norm2 = np.linalg.norm(a2)
     #print(norm1,norm2)
-
     norm = (norm1+norm2)/2
     #print(norm)
 
-    r1= r1/norm
-    r2= r2/norm
+    r1=a1/norm1
+    r2=a2/norm2
+    #r1= r1/norm
+    #r2= r2/norm
 
-    r3 = np.transpose(np.cross(np.transpose(r1),np.transpose(r2)))
+    #print(r1)
+    #print(r2)
+
+    a3 = np.transpose(np.cross(np.transpose(r1),np.transpose(r2)))
+    r3= a3/np.linalg.norm(a3)
 
     #print(r3)
 
@@ -42,8 +43,20 @@ def compute_relative_rotation(h,k):
     print("Rotation Matrix is: ")
     print(r)
 
+
+
     r = checkRotationMatrix(r)
+
     #print(r)
+
+    #result calculated by OpenCV
+    cvr = None
+    cvt=None
+    cvr = cv.decomposeHomographyMat(H,K,cvr,cvt)
+
+
+    print("CV: ")
+    print(cvr)
 
 
 def column(matrix, i):
@@ -56,7 +69,7 @@ def checkRotationMatrix(r):
     identity = np.identity(3)
 
     res = np.dot(r,rt)
-    print(res)
+    #print(res)
     print(np.linalg.det(r))
 
     if not np.allclose(res,identity):
@@ -99,6 +112,6 @@ if __name__ == '__main__':
 
 
     K= np.matrix([[alpha_x[0,0],s[0,0],x_0[0,0]],[0,alpha_y[0,0],y_0[0,0]],[0,0,1]])
-    #compute_relative_rotation(h1,K)
+    compute_relative_rotation(h1,K)
     #compute_relative_rotation(h2,K)
     #compute_relative_rotation(h3,K)
