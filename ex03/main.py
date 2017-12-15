@@ -20,6 +20,109 @@ def compute_relative_rotation(H,K):
 
     norm1 = np.linalg.norm(a1)
     norm2 = np.linalg.norm(a2)
+    print(norm1,norm2)
+    norm = (norm1+norm2)/2
+    #print(norm)
+
+    r1=a1/norm1
+    r2=a2/norm2
+
+    #r1= r1/norm
+    #r2= r2/norm
+
+
+    #print(r1)
+    #print(r2)
+
+    a3 = np.transpose(np.cross(np.transpose(r1),np.transpose(r2)))
+    r3= a3/np.linalg.norm(a3)
+
+    #print(r3)
+
+    r = np.column_stack((r1,r2))
+    r = np.column_stack((r,r3))
+
+
+    print("Rotation Matrix is: ")
+    print(r)
+
+
+
+    r = checkRotationMatrix(r)
+
+    #print(r)
+
+    #result calculated by OpenCV
+    #cvr = None
+    #cvt=None
+    #cvr = cv.decomposeHomographyMat(H,K,cvr,cvt)
+
+
+    #print("CV: ")
+    #print(cvr)
+
+
+def column(matrix, i):
+    return [row[i] for row in matrix]
+
+def checkRotationMatrix(r):
+    r2= r
+
+    rt = np.transpose(r)
+    identity = np.identity(3)
+
+    res = np.dot(r,rt)
+    #print(res)
+    print("Determinant must be close to 1 and is:")
+    print(np.linalg.det(r))
+
+    if not np.allclose(res,identity):
+        print("Matrix needs correction")
+        r2 = correctRotationMatrix(r)
+        print("corrected rotation Matrix is: ")
+        print(r2)
+        print("New determinant is: ")
+        print(np.linalg.det(r2))
+
+
+    return r2
+
+
+def correctRotationMatrix(r):
+    U,W,V = np.linalg.svd(r)
+    #print("u: ")
+    #print(U)
+    #print(W)
+    #print("v: ")
+    #print(V)
+    Vt = np.transpose(V)
+    uvt= np.dot(U,Vt)
+
+    #r2= np.dot(uvt,r)
+    r2= uvt
+    #print(r2)
+    return(r2)
+
+
+def compute_pose(H,K):
+    #same as compute_rotation() ??
+    R = None
+    t = None
+
+
+    # H = lambda K [r1 r2 t]
+
+    Kinv = np.invert(K)
+
+    #matrix A = K-1 * H
+    A = np.dot(Kinv,H)
+    #print(A)
+
+    a1 = A[:,0]
+    a2 = A[:,1]
+
+    norm1 = np.linalg.norm(a1)
+    norm2 = np.linalg.norm(a2)
     #print(norm1,norm2)
     norm = (norm1+norm2)/2
     #print(norm)
@@ -40,62 +143,17 @@ def compute_relative_rotation(H,K):
     r = np.column_stack((r1,r2))
     r = np.column_stack((r,r3))
 
+
     print("Rotation Matrix is: ")
     print(r)
+    R = checkRotationMatrix(r)
 
+    t= A[:,2]/norm
 
+    print("Translation is:")
+    print(t)
 
-    r = checkRotationMatrix(r)
-
-    #print(r)
-
-    #result calculated by OpenCV
-    cvr = None
-    cvt=None
-    cvr = cv.decomposeHomographyMat(H,K,cvr,cvt)
-
-
-    print("CV: ")
-    print(cvr)
-
-
-def column(matrix, i):
-    return [row[i] for row in matrix]
-
-def checkRotationMatrix(r):
-    r2= r
-
-    rt = np.transpose(r)
-    identity = np.identity(3)
-
-    res = np.dot(r,rt)
-    #print(res)
-    print(np.linalg.det(r))
-
-    if not np.allclose(res,identity):
-        print("Matrix needs correction")
-        r2 = correctRotationMatrix(r)
-        print("corrected Matrix is: ")
-        print(r2)
-
-
-    return r2
-
-
-def correctRotationMatrix(r):
-    U,W,V = np.linalg.svd(r)
-    #print("u: ")
-    #print(U)
-    #print(W)
-    #print("v: ")
-    #print(V)
-    Vt = np.transpose(V)
-    r2= np.dot(U,Vt)
-    #print(r2)
-    return(r2)
-
-
-
+    return R,t
 
 if __name__ == '__main__':
     base_folder = './data/'
@@ -112,6 +170,8 @@ if __name__ == '__main__':
 
 
     K= np.matrix([[alpha_x[0,0],s[0,0],x_0[0,0]],[0,alpha_y[0,0],y_0[0,0]],[0,0,1]])
-    compute_relative_rotation(h1,K)
+    #compute_relative_rotation(h1,K)
     #compute_relative_rotation(h2,K)
     #compute_relative_rotation(h3,K)
+
+    #compute_pose(h3,K)
