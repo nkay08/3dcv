@@ -1,0 +1,51 @@
+\documentclass[a4paper, twoside, english]{article}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+%\usepackage{ihci}
+\usepackage{graphicx}
+\usepackage{subfig}
+
+
+\title{Exercise 3 \\ 3D Computer Vision}  % Replace "Template Report" with Exercise 1, Exercise 2, etc
+\author{Niklas Klipphahn,\\
+}                       % Replace with your names
+   
+   
+   
+\begin{document}
+	
+\maketitle
+
+\section{Homography Definition}
+$
+\begin{bmatrix}
+	x_1'\\
+	x_2'\\
+	\vdots\\
+	v_{n+1}
+\end{bmatrix}
+= 
+\begin{bmatrix}
+	R_{11} & R_{12} & \dots & R_{1,n+1}\\
+	R_{21} & \ddots \\
+	\vdots \\
+	R_{n+1,1} & \dots & \dots & R_{n+1,n+1}
+\end{bmatrix}
+$
+or $x' = Hx$ with $(n+1)^2 -1$ DOF
+
+\section{Line preservation of homographies}
+
+Let $x_1,x_2,X3 \in \mathbb{P}$ be three points on a line.
+The definition of aline should hold for every point with the same $l=(a,b,c)$\\
+$l x_1 = 0, l x_2 = 0, l x_3 = 0$\\
+
+\begin{tabular}{lll}
+$H x_1 = h(x_1)$ & &$ l h(x_1)=0$\\
+$H x_2 = h(x_2)$ & $\rightarrow$ & $l h(x2) = 0$\\
+$H x_3 = h(x_3)$ & & $l h(x_3) = 0$	
+\end{tabular}
+
+
+\end{document}
