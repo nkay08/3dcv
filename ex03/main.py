@@ -62,6 +62,59 @@ def compute_relative_rotation(H,K):
     #print(cvr)
 
 
+def compute_relative_rotation2(H,K):
+    # page 13: t is assumed 0
+    # KRK^-1 x' =  H x'
+    # R = K^-1 H K
+    # => R_i = K H_i K^-1 ?
+
+    Kinv = np.invert(K)
+
+    KHK = np.dot(np.dot(Kinv,H),K)
+
+
+    #a1 = np.dot(np.dot(Kinv,H[:,0]),K)
+    #a2 = np.dot(np.dot(Kinv, H[:, 1]), K)
+    #a3 = np.dot(np.dot(Kinv, H[:, 2]), K)
+    a1 = KHK[:,0]
+    a2 = KHK[:,1]
+    a3 = KHK[:,2]
+    print(KHK)
+
+    r1= a1/np.linalg.norm(a1)
+    r2= a2/np.linalg.norm(a2)
+    r3 = a3/np.linalg.norm(a3)
+
+    #r3 = np.cross(r1,r2)
+
+    #print(r1,r2,r3)
+    #R = np.matrix(np.transpose(r1))
+    #R = np.column_stack((R,np.transpose(r2)))
+    #R = np.column_stack((R, np.transpose(r3)))
+
+    R = np.matrix(a1)
+    R = np.column_stack((R,a2))
+    R = np.column_stack((R, a3))
+
+    print("Rreel is:")
+    print(R)
+
+    det = np.linalg.det(R)
+
+    print("Determinant is:")
+    print(det)
+
+    if not np.isclose(det,1) or np.isclose(det,-1):
+        print("Matrix needs correction")
+        U,S,V = np.linalg.svd(R)
+        RRel = np.dot(U,V)
+
+        R = RRel
+        print("New Rrel is:")
+        print(R)
+
+    return R
+
 def column(matrix, i):
     return [row[i] for row in matrix]
 
@@ -170,8 +223,11 @@ if __name__ == '__main__':
 
 
     K= np.matrix([[alpha_x[0,0],s[0,0],x_0[0,0]],[0,alpha_y[0,0],y_0[0,0]],[0,0,1]])
+
+
     #compute_relative_rotation(h1,K)
     #compute_relative_rotation(h2,K)
-    #compute_relative_rotation(h3,K)
+    #compute_relative_rotation2(h1,K)
+    #compute_relative_rotation2(h2,K)
 
     #compute_pose(h3,K)
