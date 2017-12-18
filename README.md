@@ -1,3 +1,3 @@
 # 3dcv
 
-Files for the lecture 3D Compputer Vision at TU KL
+Files for the lecture 3D Computer Vision at TU KL
