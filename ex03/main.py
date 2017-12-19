@@ -10,7 +10,8 @@ def compute_relative_rotation(H,K):
     # KRK^-1 x' =  H x'
     # R = K^-1 H K
 
-    Kinv = np.invert(K)
+    #Kinv = np.invert(K)
+    Kinv = np.linalg.inv(K)
 
     KHK = np.linalg.multi_dot([Kinv,H,K])
 
@@ -44,7 +45,8 @@ def compute_pose(H,K):
 
     # H = lambda K [r1 r2 t]
 
-    Kinv = np.invert(K)
+    #Kinv = np.invert(K)
+    Kinv = np.linalg.inv(K)
 
     #matrix A = K-1 * H
     M = np.dot(Kinv,H)
