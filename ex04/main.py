@@ -23,8 +23,9 @@ def compute_epipolarLines(c0,F):
     for c in c0:
         c3d = create3dfrom2dpoint(c)
         Fc = compute_epipolarLine(c3d, F)
-        # print(Fc)
-        L.append(Fc[0])
+        #print(Fc)
+        L.append([Fc[0,0],Fc[0,1],Fc[0,2]])
+    L= np.matrix(L)
     return L
 
 def drawEpipolarLines(newimg,L):
@@ -47,36 +48,66 @@ def drawEpipolarLines(newimg,L):
         newimg = cv.line(newimg,(x0,y0),(x1,y1),color,3)
     return newimg
 
+
 def computeMatchingFeature(c1,L):
     p0 =[]
     p1=[]
+    #print(L)
+    #print(c1)
     for l in L:
-        #print("Start new Match")
-        #print(l)
-        a = l[0,0]
-        b=l[0,1]
-        c=l[0,2]
-        p = [a,b]
-        n = [1,(a+c/-b)]
-        n = n/np.linalg.norm(n)
-        if np.dot(p,n)<0:
-            n=-n
-        d = np.dot(p,n)
-        minD = np.abs(np.dot(c1[0],n)-d)
-        curC = c1[0]
-        for c in c1:
-            curD = np.abs(np.dot(c,n)-d)
-            if curD < minD:
-                minD=curD
-                curC = c
-                #print("d smaller: ")
-
-
-        p1.append([curC[0],curC[1]])
-        #p1 = p1 + ([curC[0],curC[1]],)
-    p1 = np.matrix(p1)
+        c = findMinimumC2(c1,l)
+        p1.append(c)
+    p1= np.matrix(p1)
+    #print(p1)
     return p1
 
+def findMinimumC(c1,l):
+    a = l[0, 0]
+    b = l[0, 1]
+    c = l[0, 2]
+    p = [a, b]
+    n = [1, (a + c *4752/ -b)]
+    n = n / np.linalg.norm(n)
+    if np.dot(p, n) < 0:
+        n = -n
+    d = np.dot(p, n)
+
+
+    minD = np.abs(np.dot(c1[0], n) - d)
+    minC = c1[0]
+    for c in c1:
+        curD=np.abs(np.dot(c, n) - d)
+        if curD < minD:
+            minD = curD
+            minC = c
+    return minC
+
+def findMinimumC2(c1,l):
+    row = 3168
+    col = 4752
+    a = l[0, 0]
+    b = l[0, 1]
+    c = l[0, 2]
+    x0, y0 = map(int, [0, -c / b])
+    x1, y1 = map(int, [col, -(c + a * col) / b])
+
+    minD = dist((x0, y0), (x1, y1), c1[0])
+    minC = c1[0]
+    for c in c1:
+        curD = dist((x0,y0),(x1,y1),c)
+        if curD < minD:
+            minD = curD
+            minC = c
+    return minC
+
+
+
+
+def dist((x1,y1),(x2,y2),(x0,y0)):
+    d1 = np.abs((y2 -y1)*x0 - (x2-x1) *y0 + x2 * y1 - y2*x1)
+    d2 = np.sqrt((y2-y1)**2+(x2-x1)**2)
+    dist = d1/d2
+    return dist
 def createStackImage(img0,img1,c0,p1):
     yoffset = 3168
     stack = np.concatenate((img0, img1), axis=0)
@@ -84,6 +115,7 @@ def createStackImage(img0,img1,c0,p1):
         color = (random.randint(0,250),random.randint(0,250),random.randint(0,250))
         stack = cv.circle(stack, (int(c0[i,0]),int(c0[i,1])), 10, color, 10)
         stack = cv.circle(stack, (int(p1[i,0]),int(p1[i,1]+yoffset)), 10, color, 10)
+        stack = cv.line(stack,(int(p1[i,0]),int(p1[i,1]+yoffset)),(int(c0[i,0]),int(c0[i,1])),color,5)
     return stack
 
 def createaxMatrix(a):
@@ -104,7 +136,7 @@ def create3dfrom2dpoint(v2d):
     return v3d
 
 def mapFeatures(K_0,K_1,R,t,c0,c1,img0,img1):
-    newimg = copy.copy(img0)
+    newimg = copy.copy(img1)
     color = (0, 0, 230)
     xoffset = 2376
     yoffset = 1584
@@ -113,6 +145,7 @@ def mapFeatures(K_0,K_1,R,t,c0,c1,img0,img1):
     F = compute_F(K_0,K_1,R,t)
 
     L = compute_epipolarLines(c0,F)
+
 
 
     newimg = drawEpipolarLines(newimg,L)
@@ -129,8 +162,8 @@ def mapFeatures(K_0,K_1,R,t,c0,c1,img0,img1):
     #print(c0[5])
     #print(p1)
     #print(p1[0,0])
-    #stackImage = createStackImage(img0,img1,c0,p1)
-    #cv.imwrite("matches.jpg",stackImage)
+    stackImage = createStackImage(img0,img1,c0,p1)
+    cv.imwrite("matches.jpg",stackImage)
 
 
 def reconstructStructure():
