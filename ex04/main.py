@@ -4,10 +4,12 @@ import cv2 as cv
 import copy
 import scipy.io as io
 import random
+import matplotlib
 
 
 def compute_F(K_0,K_1,R,t):
-    Kit_1 = np.transpose(np.linalg.inv(K_1))
+    #Kit_1 = np.transpose(np.linalg.inv(K_1))
+    Kit_1 = np.linalg.inv(np.transpose(K_1))
     tx = createaxMatrix(t)
     Ki_0 = np.linalg.inv(K_0)
     F=np.linalg.multi_dot([Kit_1,tx,R,Ki_0])
@@ -37,16 +39,24 @@ def drawEpipolarLines(newimg,L):
         a = l[0,0]
         b=l[0,1]
         c=l[0,2]
-        fact0 = -10
-        fact1= 10
-        acb = -((a+c)/b)
+
 
 
         x0,y0=map(int,[0,-c/b])
-        x1,y1=map(int,[col,-(c+a*col)/b])
+        #x1,y1=map(int,[col,-(c+a*col)/b])
+        x1,y1 = map(int,[-c/a,0])
+
         #print(x0,y0,x1,y1)
         newimg = cv.line(newimg,(x0,y0),(x1,y1),color,3)
     return newimg
+
+def computeMatchingFeatures2(c0,c1,F):
+    corresponding = []
+    for c in c0:
+        cmin = findMinimumC3(c, c1, F)
+        corresponding.append(cmin)
+    corresponding = np.matrix(corresponding)
+    return corresponding
 
 
 def computeMatchingFeature(c1,L):
@@ -100,6 +110,20 @@ def findMinimumC2(c1,l):
             minC = c
     return minC
 
+def findMinimumC3(c,c1,F):
+    min = 100
+    newC = None
+    for cmin in c1:
+        curmin = np.abs(np.linalg.multi_dot([np.transpose(create3dfrom2dpoint(cmin)),F,create3dfrom2dpoint(c)]))
+        if curmin < min:
+            min = curmin
+            newC=cmin
+    return newC
+
+
+
+
+
 
 
 
@@ -143,9 +167,19 @@ def mapFeatures(K_0,K_1,R,t,c0,c1,img0,img1):
 
 
     F = compute_F(K_0,K_1,R,t)
+    print(F)
+
+    #print(np.linalg.multi_dot([create3dfrom2dpoint(c1[0]),F,create3dfrom2dpoint(c0[0])]))
+    #stack = np.concatenate((img0, img1), axis=0)
+    #stack = cv.circle(stack,(int(c0[0,0]),int(c0[0,1])),10,color,5)
+    #stack = cv.circle(stack, (int(c1[0,0]),int(c1[0,1]+3168)), 10, color, 5)
+    #cv.imshow("",stack)
+    #cv.waitKey(0)
+    #cv.destroyAllWindows()
+    #cv.imwrite("test.jpg",stack)
 
     L = compute_epipolarLines(c0,F)
-
+    #print(L)
 
 
     newimg = drawEpipolarLines(newimg,L)
@@ -155,19 +189,40 @@ def mapFeatures(K_0,K_1,R,t,c0,c1,img0,img1):
     #cv.waitKey(0)
     #cv.destroyAllWindows()
     #print(c1)
-    p1 = computeMatchingFeature(c1,L)
+    matchingFeatures = computeMatchingFeatures2(c0,c1,F)
     #print(len(c0),len(p1))
     #print(p1)
 
     #print(c0[5])
     #print(p1)
     #print(p1[0,0])
-    stackImage = createStackImage(img0,img1,c0,p1)
+    stackImage = createStackImage(img0,img1,c0,matchingFeatures)
     cv.imwrite("matches.jpg",stackImage)
+    return matchingFeatures
+
+def triangulate(P0,P1,c0,matchingFeatures):
+    tripoints = []
+    for i in range(0,len(c0)-1):
+        A_0 = [np.dot(c0[i,0],P0[2,:])-P0[0,:],np.dot(c0[i,1],P0[2,:])-P0[1,:]]
+        A_1 = [np.dot(matchingFeatures[i,0],P1[2,:])-P1[0,:],np.dot(matchingFeatures[i,1],P1[2,:])-P1[1,:]]
+        A = np.matrix([A_0,A_1])
+        eig = np.matrix(np.linalg.eig(np.dot(np.transpose(A),A)))
+        min = eig.min(1)
+        v = min/min[3]
+        tripoints.append([v[0],v[1],v[2]])
+    return tripoints
 
 
-def reconstructStructure():
-    y=0
+
+
+def reconstructStructure(K_0,K_1,R_1,t_1,c0,matchingFeatures):
+    id = np.identity(3)
+    id0 = np.column_stack((id,np.transpose([0,0,0])))
+    P0 = np.dot(K_0,id0)
+    P1= np.dot(K_1,np.column_stack((R_1,t_1)))
+
+    triPoints = triangulate(P0,P1,c0,matchingFeatures)
+
 
 
 if __name__ == '__main__':
@@ -183,7 +238,8 @@ if __name__ == '__main__':
     img1 = cv.imread(base_folder + 'Camera01.jpg')
     #print(create3dfrom2dpoint(cornersCam0[0]))
 
-    mapFeatures(K_1,K_0,R_1,t_1,cornersCam0,cornersCam1,img0,img1)
+    matchingFeatures = mapFeatures(K_1,K_0,R_1,t_1,cornersCam0,cornersCam1,img0,img1)
+
 
 
 
