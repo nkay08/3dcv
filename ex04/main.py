@@ -4,7 +4,8 @@ import cv2 as cv
 import copy
 import scipy.io as io
 import random
-import matplotlib
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 
 def compute_F(K_0,K_1,R,t):
@@ -222,6 +223,14 @@ def reconstructStructure(K_0,K_1,R_1,t_1,c0,matchingFeatures):
     P1= np.dot(K_1,np.column_stack((R_1,t_1)))
 
     triPoints = triangulate(P0,P1,c0,matchingFeatures)
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    print(triPoints)
+    X = triPoints[:,0]
+    Y=triPoints[:,1]
+    Z=triPoints[:,2]
+    ax.scatter(X,Y,Z)
+    plt.show()
 
 
 
@@ -239,6 +248,7 @@ if __name__ == '__main__':
     #print(create3dfrom2dpoint(cornersCam0[0]))
 
     matchingFeatures = mapFeatures(K_1,K_0,R_1,t_1,cornersCam0,cornersCam1,img0,img1)
+    reconstructStructure(K_0,K_1,R_1,t_1,cornersCam0,matchingFeatures)
 
 
 
