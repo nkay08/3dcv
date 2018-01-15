@@ -4,7 +4,8 @@ import cv2 as cv
 import copy
 import scipy.io as io
 import random
-import matplotlib
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 
 def compute_F(K_0,K_1,R,t):
@@ -93,7 +94,41 @@ def mapFeatures(K_0,K_1,R,t,c0,c1,img0,img1):
     cv.imwrite("epilines.jpg",newimg)
     stackImage = createStackImage(img0,img1,c0,cminpoint)
     cv.imwrite("matches.jpg",stackImage)
-    return matchingFeatures
+    return cminpoint
+
+def getPMat(k,r=None,t=None):
+    iMat = np.identity(3)
+    temp = None
+    if r is None:
+       r = iMat
+    if t is None:
+        temp = np.column_stack((iMat,(0,0,0)))
+    else:
+        temp = np.column_stack((iMat,-np.transpose(t)))
+    return np.linalg.multi_dot([k,r,temp])
+        
+    
+
+def get3DPoints(K_0,K_1,R_1,t_1,points1,matchingPoints):
+    WPoints = []
+    PMat0 = getPMat(K_0,None,None)
+    PMat1 = getPMat(K_1,R_1,t_1)
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    for i in range(0,len(points1)-1):
+        temp = ((points1[i,0]-PMat0[0,2])*PMat1[0,0]/PMat0[0,0])+((points1[i,1]-PMat0[1,2])*PMat1[0,1]/PMat0[1,1])+PMat1[0,2]-matchingPoints[i,0]
+        Zw = -PMat1[0,3]/temp
+        Xw = (points1[i,0]-PMat0[0,2])*Zw/PMat0[0,0]
+        Yw = (points1[i,1]-PMat0[1,2])*Zw/PMat0[1,1]
+        ax.scatter(Xw, Yw, Zw)
+        WPoints.append([Xw,Yw,Zw])
+    ax.set_xlabel('X Label')
+    ax.set_ylabel('Y Label')
+    ax.set_zlabel('Z Label')
+    plt.show()
+    
+    #print(PMat)
+    
 
 if __name__ == '__main__':
     base_folder = './data/'
@@ -107,7 +142,8 @@ if __name__ == '__main__':
     img0 = cv.imread(base_folder + 'Camera00.jpg')
     img1 = cv.imread(base_folder + 'Camera01.jpg')
 
-    matchingFeatures = mapFeatures(K_0,K_1,R_1,t_1,cornersCam0,cornersCam1,img0,img1)
+    matchingPoints = mapFeatures(K_0,K_1,R_1,t_1,cornersCam0,cornersCam1,img0,img1)
+    get3DPoints(K_0,K_1,R_1,t_1,cornersCam0,matchingPoints)
 
 
 
