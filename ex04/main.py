@@ -156,8 +156,9 @@ def get3DPoints2(K_0,K_1,R_1,t_1,points1,matchingPoints):
         A1y = matchingPoints[i,1]*PMat1[2,:]-PMat1[1,:]
         A = np.row_stack((A0x,A0y,A1x,A1y))
         X = solution(A)
-        ax.scatter(X[0],X[1],X[2])
-        WPoints.append([X[0],X[1],X[2]])
+
+        ax.scatter(X[0]/X[3],X[1]/X[3],X[2]/X[3])
+        WPoints.append([X[0]/X[3],X[1]/X[3],X[2]/X[3]])
     ax.set_xlabel('X Label')
     ax.set_ylabel('Y Label')
     ax.set_zlabel('Z Label')
@@ -183,8 +184,8 @@ if __name__ == '__main__':
 
     matchingPoints = mapFeatures(K_0,K_1,R_1,t_1,cornersCam0,cornersCam1,img0,img1)
     get3DPoints(K_0, K_1, R_1, t_1, cornersCam0, matchingPoints)
-    #get3DPointsOpenCV(K_0,K_1,R_1,t_1,cornersCam0,matchingPoints)
-    #get3DPoints2(K_0,K_1,R_1,t_1,cornersCam0,matchingPoints)
+    get3DPointsOpenCV(K_0,K_1,R_1,t_1,cornersCam0,matchingPoints)
+    get3DPoints2(K_0,K_1,R_1,t_1,cornersCam0,matchingPoints)
 
 
 
