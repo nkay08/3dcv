@@ -126,9 +126,48 @@ def get3DPoints(K_0,K_1,R_1,t_1,points1,matchingPoints):
     ax.set_ylabel('Y Label')
     ax.set_zlabel('Z Label')
     plt.show()
-    
     #print(PMat)
-    
+
+def get3DPointsOpenCV(K_0,K_1,R_1,t_1,points1,matchingPoints):
+    WPoints = []
+    PMat0 = getPMat(K_0,None,None)
+    PMat1 = getPMat(K_1,R_1,t_1)
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    Xw = cv.triangulatePoints(PMat0,PMat1,np.transpose(points1),np.transpose(matchingPoints))
+    for i in range(0,len(Xw[0]-1)):
+        ax.scatter(Xw[0,i]/Xw[3,i],Xw[1,i]/Xw[3,i],Xw[2,i]/Xw[3,i])
+    ax.set_xlabel('X Label')
+    ax.set_ylabel('Y Label')
+    ax.set_zlabel('Z Label')
+    plt.show()
+
+def get3DPoints2(K_0,K_1,R_1,t_1,points1,matchingPoints):
+    WPoints = []
+    PMat0 = getPMat(K_0,None,None)
+    PMat1 = getPMat(K_1,R_1,t_1)
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    for i in range(0,len(points1)-1):
+    #for i in range(0, 1):
+        A0x = points1[i,0]*PMat0[2,:]-PMat0[0,:]
+        A0y = points1[i,1]*PMat0[2,:]-PMat0[1,:]
+        A1x = matchingPoints[i,0]*PMat1[2,:]-PMat1[0,:]
+        A1y = matchingPoints[i,1]*PMat1[2,:]-PMat1[1,:]
+        A = np.row_stack((A0x,A0y,A1x,A1y))
+        X = solution(A)
+        ax.scatter(X[0],X[1],X[2])
+        WPoints.append([X[0],X[1],X[2]])
+    ax.set_xlabel('X Label')
+    ax.set_ylabel('Y Label')
+    ax.set_zlabel('Z Label')
+    plt.show()
+
+def solution(A):
+    # find the eigenvalues and eigenvector of A(transpose).A
+    e_vals, e_vecs = np.linalg.eig(np.dot(A.T, A))
+    # extract the eigenvector (column) associated with the minimum eigenvalue
+    return e_vecs[:, np.argmin(e_vals)]
 
 if __name__ == '__main__':
     base_folder = './data/'
@@ -143,7 +182,10 @@ if __name__ == '__main__':
     img1 = cv.imread(base_folder + 'Camera01.jpg')
 
     matchingPoints = mapFeatures(K_0,K_1,R_1,t_1,cornersCam0,cornersCam1,img0,img1)
-    get3DPoints(K_0,K_1,R_1,t_1,cornersCam0,matchingPoints)
+    get3DPoints(K_0, K_1, R_1, t_1, cornersCam0, matchingPoints)
+    #get3DPointsOpenCV(K_0,K_1,R_1,t_1,cornersCam0,matchingPoints)
+    #get3DPoints2(K_0,K_1,R_1,t_1,cornersCam0,matchingPoints)
+
 
 
 
