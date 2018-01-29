@@ -246,6 +246,47 @@ def pixelValue(pixel):
 	weightB=0.11
 	return(weightR * pixel[0]+weightG * pixel[1]+ weightB * pixel[2])
 
+def mapToRange(input,rmin,rmax):
+	if len(input)> 1:
+		if len(input[0])>1:
+			mapToRange2d(input,rmin,rmax)
+		else:
+			mapToRange1d(input,rmin,rmax)
+
+def mapToRange2d(input,rmin,rmax):
+	min=input[0,0]
+	max=input[0,0]
+	out= np.zeros((len(input),len(input[0])))
+	for i in range(0, len(input)):
+		for j in range(0,len(input[0])):
+			if input[i,j]< min:
+				min = input[i,j]
+			if input[i,j]> max:
+				max=input[i,j]
+
+	for i in range(0, len(input)):
+		for j in range(0, len(input[0])):
+			s = input[i,j]
+			t= rmin + ((s - max)*(rmax-rmin)/(max-min))
+			out[i,j]=t
+	return t
+
+def mapToRange1d(input,rmin,rmax):
+	min = input[0]
+	max = input[0]
+	out = np.zeros(len(input))
+	for i in range(0, len(input)):
+		if input[i] < min:
+			min = input[i]
+		if input[i] > max:
+			max = input[i]
+
+	for i in range(0, len(input)):
+		s = input[i]
+		t = rmin + ((s - max) * (rmax - rmin) / (max - min))
+		out[i] = t
+	return t
+
 def main():
 	# Set parameters
 	# Use 1: for pixel-wise disparity
