@@ -2,6 +2,7 @@ import cv2 as cv
 import numpy as np
 import scipy.io as io
 import os
+import random
 
 # Global varialbles
 
@@ -25,6 +26,10 @@ W_BOUND = (60, 230)
 
 H_BOUND = (400, 650)
 W_BOUND = (40, 230)
+#H_BOUND = (600, 650)
+#W_BOUND = (200, 230)
+H_BOUND=(815,880)
+W_BOUND=(1090,1170)
 
 # Minimum and Maximum disparies(dataset specific parameters)
 DISPARITY_BOUND = (int(31/SCALE_FACTOR), int(257/SCALE_FACTOR))
@@ -194,7 +199,52 @@ def ncc(patch_1, patch_2):
 	2. Reshape each normalised image patch into a 1D feature vector and then
 	compute the dot product between the resulting normalised feature vectors.
 	"""
-	raise NotImplementedError
+	nofpoints = len(patch_1)*len(patch_1[0])
+
+	rvec1=np.ndarray.flatten(patch_1[:,:,0])
+	bvec1 = np.ndarray.flatten(patch_1[:, :, 1])
+	gvec1 = np.ndarray.flatten(patch_1[:, :, 2])
+
+	rvec2=np.ndarray.flatten(patch_2[:,:,0])
+	bvec2 = np.ndarray.flatten(patch_2[:, :, 1])
+	gvec2 = np.ndarray.flatten(patch_2[:, :, 2])
+
+	rmean1=np.mean(rvec1)
+	gmean1 = np.mean(gvec1)
+	bmean1 = np.mean(bvec1)
+
+	rmean2=np.mean(rvec2)
+	gmean2 = np.mean(gvec2)
+	bmean2 = np.mean(bvec2)
+
+	rstd1 = np.std(rvec1)
+	gstd1 = np.std(gvec1)
+	bstd1 = np.std(bvec1)
+
+	rstd2 = np.std(rvec2)
+	gstd2 = np.std(gvec2)
+	bstd2 = np.std(bvec2)
+
+	#normalize vectors
+	for i in range(0,len(rvec1)):
+		rvec1[i]=(rvec1[i]-rmean1)/rstd1
+		gvec1[i] = (gvec1[i] - gmean1) / gstd1
+		bvec1[i] = (bvec1[i] - bmean1) / bstd1
+	for i in range(0,len(rvec2)):
+		rvec2[i]=(rvec2[i]-rmean2)/rstd2
+		gvec2[i] = (gvec2[i] - gmean2) / gstd2
+		bvec2[i] = (bvec2[i] - bmean2) / bstd2
+	#color vectors now normalized
+	rdot = np.dot(rvec1,rvec2)
+	gdot = np.dot(gvec1,gvec2)
+	bdot = np.dot(bvec1,bvec2)
+
+
+	#have ncc for each channel, but how overall?
+	cost=(rdot+gdot+bdot)/3
+
+	#raise NotImplementedError
+	return cost
 
 def ssd(feature_1, feature_2):
 	"""
@@ -202,7 +252,11 @@ def ssd(feature_1, feature_2):
 	Compute the sum of square difference between the input features
 	"""
 
-	raise NotImplementedError
+	#raise NotImplementedError
+	#features are only points here?
+	cost = ((feature_1[0]-feature_2[0])**2)+((feature_1[1]-feature_2[1])**2)+((feature_1[2]-feature_2[2])**2)
+	#cost = (pixelValue(feature_1)-pixelValue(feature_2))**2
+	return cost
 
 def stereo_matching(img_left, img_right, K_SIZE, disp_per_pixel):
 	"""
@@ -223,53 +277,125 @@ def stereo_matching(img_left, img_right, K_SIZE, disp_per_pixel):
 	# Save point clouds as .ply and depth as .png files
 	#
 	#for every row in im_left
-	dispMap=np.zeros((H_BOUND[1]-H_BOUND[0],W_BOUND[1]-W_BOUND[0]))
+	nccctrl = False
+	ssdctrl = True
+
+	if ssdctrl: ssdDispMap = np.empty((H_BOUND[1]-H_BOUND[0],W_BOUND[1]-W_BOUND[0]))
+	if nccctrl: nccDispMap = np.empty((H_BOUND[1]-H_BOUND[0],W_BOUND[1]-W_BOUND[0]))
 	for i in range(H_BOUND[0],H_BOUND[1]):
+		print("Row Y of:")
+		print(i,H_BOUND[1])
 		#for every column in im_left
 		#->for every pixel in im_left within bounds
 		for j0 in range(W_BOUND[0],W_BOUND[1]):
-			P0 = img_left[i,j0]
+			print("Col X of:")
+			print(j0,W_BOUND[1])
 
 			#for every pixel in im_left look for pixel in right image on same row
+			P0 = img_left[i,j0]
 
+			curssd=None
+			ssdDisp=None
+			if ssdctrl:
+				curssd=ssd(P0,img_right[i,j0])
+				ssdDisp=0
+
+			nccVec=None
+			curNcc=None
+			nccDisp=None
+			if nccctrl:
+				nccVec=np.empty((W_BOUND[1]-W_BOUND[0]))
+				nccDisp=0
+				curNcc = 9999999999
+
+			#for every pixel in the left image move window along horizontal line (epipolar line since images are rectified)
 			for j1 in range(W_BOUND[0],W_BOUND[1]):
-				P1 = img_right[i,j1]
-				ssd= ssd(P0,P1)
+				if nccctrl:
+					#print("NCC of:")
+					#print(j1, W_BOUND[1])
+					patch0 = sub_pixel_crop(img_left,i,j0,7)
+					patch1 = sub_pixel_crop(img_right,i,j1,7)
+					tempNcc = ncc(patch0,patch1)
+					nccVec[j1-W_BOUND[0]]=tempNcc
+					if tempNcc < curNcc:
+						curNcc = tempNcc
+						nccDisp = j1 - j0
+				if ssdctrl:
+					P1 = img_right[i,j1]
+					tempssd= ssd(P0,P1)
+					if tempssd < curssd:
+						curssd=tempssd
+						ssdDisp=j1-j0
+			if ssdctrl: ssdDispMap[i-H_BOUND[0],j0-W_BOUND[0]]=ssdDisp
+			if nccctrl: nccDispMap[i-H_BOUND[0],j0-W_BOUND[0]]=nccDisp
+			
+	if ssdctrl:
+		#print(ssdDispMap)
+		cv.imwrite("ssdDispMapRaw.jpg",ssdDispMap)
+		ssdDispMap2 = mapToRange(ssdDispMap,0,255)
+		#print(ssdDispMap2)
+		cv.imwrite("ssdDispMap.jpg",ssdDispMap2)
+		ssdDmap=np.empty((len(ssdDispMap),len(ssdDispMap[0])))
+		for i in range(0,len(ssdDispMap)):
+			for j in range(0,len(ssdDispMap[0])):
+				ssdDmap[i,j]=disparity_to_depth(np.int(ssdDispMap[i,j]))
+		ssdDmap = np.array(ssdDmap,np.uint8)
+		write_depth_to_image(ssdDmap,"ssdDepthMap.jpg")
+		#cv.imwrite("depthMap.jg",ssdDmap)
+	if nccctrl:
+		nccDispMap2 = mapToRange(nccDispMap,0,255)
+		cv.imwrite("nccDispMap.jpg",nccDispMap2)
+		nccDmap=np.empty((len(nccDispMap),len(nccDispMap[0])))
+		for i in range(0,len(nccDispMap)):
+			for j in range(0,len(nccDispMap[0])):
+				nccDmap[i,j]=disparity_to_depth(np.int(nccDispMap[i,j]))
+		nccDmap = np.array(nccDmap,np.uint8)
+		write_depth_to_image(nccDmap,"nccDMap.jpg")
+
+
 	#cv.imshow("disp",dispMap)
 	#cv.waitKey(0)
 	#raise NotImplementedError
 	return True
 
 def pixelValue(pixel):
-	weightR= 0.3
-	weightG=0.6
-	weightB=0.11
+	#weightR = 0.3
+	#weightG = 0.6
+	#weightB = 0.11
+	weightR=1
+	weightG=1
+	weightB=1
 	return(weightR * pixel[0]+weightG * pixel[1]+ weightB * pixel[2])
 
 def mapToRange(input,rmin,rmax):
+	out=None
 	if len(input)> 1:
 		if len(input[0])>1:
-			mapToRange2d(input,rmin,rmax)
+			out = mapToRange2d(input,rmin,rmax)
 		else:
-			mapToRange1d(input,rmin,rmax)
+			out = mapToRange1d(input,rmin,rmax)
+	return out
 
 def mapToRange2d(input,rmin,rmax):
 	min=input[0,0]
 	max=input[0,0]
-	out= np.zeros((len(input),len(input[0])))
+	out= np.empty((len(input),len(input[0])))
 	for i in range(0, len(input)):
 		for j in range(0,len(input[0])):
 			if input[i,j]< min:
 				min = input[i,j]
 			if input[i,j]> max:
 				max=input[i,j]
-
+	#print("max,min is:")
+	#print(max,min)
 	for i in range(0, len(input)):
 		for j in range(0, len(input[0])):
 			s = input[i,j]
-			t= rmin + ((s - max)*(rmax-rmin)/(max-min))
-			out[i,j]=t
-	return t
+			t= rmin + ((s - min)*(rmax-rmin)/(max-min))
+			#out[i,j]=int(t)
+			out[i,j]=int(t)
+			#print(s,t)
+	return np.array(out,np.uint8)
 
 def mapToRange1d(input,rmin,rmax):
 	min = input[0]
@@ -305,5 +431,10 @@ def main():
 	resized_r_img = cv.pyrDown(r_im, SCALE_FACTOR)
 	right_img = copy_make_border(resized_r_img, K_SIZE)
 	# TODO: #1 fill in the stereo_matching() function called below
+	#gray_image = cv.cvtColor(left_img, cv.COLOR_BGR2GRAY)
+	#print(gray_image)
+	#cv.imshow("gray",gray_image)
+	#cv.waitKey(0)
 	dummy = stereo_matching(left_img, right_img, K_SIZE, disp_per_pixel)
+
 main()
